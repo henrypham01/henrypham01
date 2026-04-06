@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm)",
+      "Bash(brew --version)",
+      "Bash(echo $PATH)",
+      "Bash(/opt/homebrew/bin/brew --version)",
+      "Bash(/usr/local/bin/brew --version)",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/ngadidi0511/**)",
+      "Bash(export PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:$PATH)",
+      "Bash(brew list:*)",
+      "Bash(brew install:*)",
+      "Bash(export PATH=\"/opt/homebrew/opt/node@20/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:$PATH\")",
+      "Bash(npm --version)",
+      "Bash(export PATH=/opt/homebrew/opt/node@20/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:$PATH)"
+    ]
+  }
+}
