@@ -1,0 +1,518 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ==================== Enums ====================
+
+enum QuotationStatus {
+  DRAFT
+  CONFIRMED
+  CONVERTED
+  CANCELLED
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  CONFIRMED
+  CONVERTED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  CHO_IN
+  DA_IN
+  CANCELLED
+}
+
+enum DeliveryNoteStatus {
+  DRAFT
+  COMPLETED
+  CANCELLED
+}
+
+enum MovementType {
+  STOCK_IN
+  STOCK_OUT
+  ADJUSTMENT
+  INITIAL
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHECK
+  OTHER
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  COMPLETED
+  CANCELLED
+  RETURNED
+}
+
+// ==================== Category ====================
+
+model Category {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  name      String
+  nameEn    String?
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  products  Product[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("categories")
+}
+
+// ==================== Unit ====================
+
+model Unit {
+  id              String           @id @default(cuid())
+  code            String           @unique
+  name            String
+  nameEn          String?
+  products        Product[]
+  conversionsFrom UnitConversion[] @relation("FromUnit")
+  conversionsTo   UnitConversion[] @relation("ToUnit")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@map("units")
+}
+
+model UnitConversion {
+  id         String  @id @default(cuid())
+  fromUnitId String
+  toUnitId   String
+  factor     Decimal
+  fromUnit   Unit    @relation("FromUnit", fields: [fromUnitId], references: [id])
+  toUnit     Unit    @relation("ToUnit", fields: [toUnitId], references: [id])
+
+  @@unique([fromUnitId, toUnitId])
+  @@map("unit_conversions")
+}
+
+// ==================== Product ====================
+
+model Product {
+  id             String          @id @default(cuid())
+  sku            String          @unique
+  barcode        String?         @unique
+  name           String
+  nameEn         String?
+  description    String?
+  categoryId     String?
+  category       Category?       @relation(fields: [categoryId], references: [id])
+  baseUnitId     String
+  baseUnit       Unit            @relation(fields: [baseUnitId], references: [id])
+  supplierId     String?
+  supplier       Supplier?       @relation(fields: [supplierId], references: [id])
+  brandId        String?
+  brand          Brand?          @relation(fields: [brandId], references: [id])
+  costPrice      Decimal         @default(0)
+  sellingPrice   Decimal         @default(0)
+  vatRate        Decimal         @default(0.10)
+  minStock       Decimal         @default(0)
+  maxStock       Decimal         @default(0)
+  currentStock   Decimal         @default(0)
+  origin         String?
+  imageUrl       String?
+  isActive       Boolean         @default(true)
+  isStarred      Boolean         @default(false)
+  isDeleted      Boolean         @default(false)
+  // Cosmetics / supplements fields
+  batchNumber        String?
+  manufacturingDate  DateTime?
+  expiryDate         DateTime?
+  registrationNumber String?
+  usageFunction      String?
+  lineItems           LineItem[]
+  stockMovements      StockMovement[]
+  purchaseItems       PurchaseOrderItem[]
+  purchaseReturnItems PurchaseReturnItem[]
+  createdAt           DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([expiryDate])
+  @@map("products")
+}
+
+model Supplier {
+  id             String          @id @default(cuid())
+  code           String?         @unique
+  name           String
+  phone          String?
+  email          String?
+  address        String?
+  city           String?
+  ward           String?
+  notes          String?
+  companyName    String?
+  taxId          String?
+  groupId        String?
+  group          SupplierGroup?  @relation(fields: [groupId], references: [id])
+  isActive       Boolean         @default(true)
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("suppliers")
+}
+
+model SupplierGroup {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  suppliers Supplier[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("supplier_groups")
+}
+
+model Brand {
+  id        String    @id @default(cuid())
+  name      String
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("brands")
+}
+
+// ==================== Customer ====================
+
+model Customer {
+  id              String       @id @default(cuid())
+  code            String       @unique
+  name            String
+  contactPerson   String?
+  phone           String?
+  email           String?
+  taxId           String?
+  address         String?
+  city            String?
+  region          String?
+  paymentTermDays Int          @default(30)
+  creditLimit     Decimal      @default(0)
+  discountPercent Decimal      @default(0)
+  isActive        Boolean      @default(true)
+  quotations      Quotation[]
+  salesOrders     SalesOrder[]
+  invoices        Invoice[]
+  payments        Payment[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@map("customers")
+}
+
+// ==================== Quotation (Báo giá) ====================
+
+model Quotation {
+  id             String          @id @default(cuid())
+  documentNumber String          @unique
+  customerId     String
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  issueDate      DateTime        @default(now())
+  validUntil     DateTime?
+  status         QuotationStatus @default(DRAFT)
+  notes          String?
+  subtotal       Decimal         @default(0)
+  discountAmount Decimal         @default(0)
+  vatAmount      Decimal         @default(0)
+  totalAmount    Decimal         @default(0)
+  lineItems      LineItem[]
+  salesOrders    SalesOrder[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("quotations")
+}
+
+// ==================== Sales Order (Đơn đặt hàng) ====================
+
+model SalesOrder {
+  id             String           @id @default(cuid())
+  documentNumber String           @unique
+  customerId     String
+  customer       Customer         @relation(fields: [customerId], references: [id])
+  quotationId    String?
+  quotation      Quotation?       @relation(fields: [quotationId], references: [id])
+  issueDate      DateTime         @default(now())
+  deliveryDate   DateTime?
+  status         SalesOrderStatus @default(DRAFT)
+  notes          String?
+  subtotal       Decimal          @default(0)
+  discountAmount Decimal          @default(0)
+  vatAmount      Decimal          @default(0)
+  totalAmount    Decimal          @default(0)
+  lineItems      LineItem[]
+  invoices       Invoice[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@map("sales_orders")
+}
+
+// ==================== Invoice (Hóa đơn) ====================
+
+model Invoice {
+  id             String         @id @default(cuid())
+  documentNumber String          @unique
+  customerId     String
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  salesOrderId   String?
+  salesOrder     SalesOrder?     @relation(fields: [salesOrderId], references: [id])
+  issueDate      DateTime        @default(now())
+  status         InvoiceStatus   @default(CHO_IN)
+  printedAt      DateTime?
+  notes          String?
+  subtotal       Decimal         @default(0)
+  discountAmount Decimal         @default(0)
+  vatAmount      Decimal         @default(0)
+  shippingFee    Decimal         @default(0)
+  totalAmount    Decimal         @default(0)
+  paidAmount     Decimal         @default(0)
+  lineItems      LineItem[]
+  deliveryNotes  DeliveryNote[]
+  payments       Payment[]
+  stockMovements StockMovement[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("invoices")
+}
+
+// ==================== Delivery Note (Phiếu xuất kho) ====================
+
+model DeliveryNote {
+  id             String             @id @default(cuid())
+  documentNumber String             @unique
+  invoiceId      String
+  invoice        Invoice            @relation(fields: [invoiceId], references: [id])
+  issueDate      DateTime           @default(now())
+  status         DeliveryNoteStatus @default(DRAFT)
+  notes          String?
+  lineItems      LineItem[]
+  stockMovements StockMovement[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@map("delivery_notes")
+}
+
+// ==================== Line Item ====================
+
+model LineItem {
+  id              String        @id @default(cuid())
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Decimal      
+  unitPrice       Decimal      
+  discountPercent Decimal       @default(0)
+  vatRate         Decimal       @default(0.10)
+  lineTotal       Decimal      
+  sortOrder       Int           @default(0)
+  quotationId     String?
+  quotation       Quotation?    @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  salesOrderId    String?
+  salesOrder      SalesOrder?   @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  invoiceId       String?
+  invoice         Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  deliveryNoteId  String?
+  deliveryNote    DeliveryNote? @relation(fields: [deliveryNoteId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+
+  @@map("line_items")
+}
+
+// ==================== Stock Movement ====================
+
+model StockMovement {
+  id              String         @id @default(cuid())
+  productId       String
+  product         Product        @relation(fields: [productId], references: [id])
+  deliveryNoteId  String?
+  deliveryNote    DeliveryNote?  @relation(fields: [deliveryNoteId], references: [id])
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  invoiceId       String?
+  invoice         Invoice?       @relation(fields: [invoiceId], references: [id])
+  movementType    MovementType
+  quantity        Decimal       
+  unitCost        Decimal        @default(0)
+  totalCost       Decimal        @default(0)
+  balanceQty      Decimal        @default(0)
+  balanceCost     Decimal        @default(0)
+  movementDate    DateTime       @default(now())
+  notes           String?
+  createdAt       DateTime       @default(now())
+
+  @@index([productId, movementDate])
+  @@map("stock_movements")
+}
+
+// ==================== Purchase Order (Phiếu nhập) ====================
+
+model PurchaseOrder {
+  id             String              @id @default(cuid())
+  code           String              @unique
+  supplierId     String?
+  supplier       Supplier?           @relation(fields: [supplierId], references: [id])
+  status         PurchaseOrderStatus @default(DRAFT)
+  subtotal       Decimal             @default(0)
+  discountAmount Decimal             @default(0)
+  totalAmount    Decimal             @default(0)
+  totalPaid      Decimal             @default(0)
+  notes          String?
+  items          PurchaseOrderItem[]
+  payments       PurchasePayment[]
+  returns        PurchaseReturn[]
+  stockMovements StockMovement[]
+  createdById    String?
+  createdBy      User?               @relation("PurchaseOrderCreator", fields: [createdById], references: [id])
+  completedAt    DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Decimal      
+  costPrice       Decimal      
+  lineTotal       Decimal      
+  sortOrder       Int           @default(0)
+  createdAt       DateTime      @default(now())
+
+  @@map("purchase_order_items")
+}
+
+model PurchasePayment {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  amount          Decimal      
+  method          PaymentMethod @default(CASH)
+  paidAt          DateTime      @default(now())
+  notes           String?
+  createdAt       DateTime      @default(now())
+
+  @@map("purchase_payments")
+}
+
+// ==================== Purchase Return (Trả hàng nhập) ====================
+
+model PurchaseReturn {
+  id              String               @id @default(cuid())
+  code            String               @unique
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder        @relation(fields: [purchaseOrderId], references: [id])
+  returnDate      DateTime             @default(now())
+  reason          String?
+  totalAmount     Decimal              @default(0)
+  items           PurchaseReturnItem[]
+  createdById     String?
+  createdBy       User?                @relation("PurchaseReturnCreator", fields: [createdById], references: [id])
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@map("purchase_returns")
+}
+
+model PurchaseReturnItem {
+  id               String         @id @default(cuid())
+  purchaseReturnId String
+  purchaseReturn   PurchaseReturn @relation(fields: [purchaseReturnId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product        @relation(fields: [productId], references: [id])
+  quantity         Decimal       
+  costPrice        Decimal       
+  lineTotal        Decimal       
+  createdAt        DateTime       @default(now())
+
+  @@map("purchase_return_items")
+}
+
+// ==================== Payment (Phiếu thu) ====================
+
+model Payment {
+  id             String        @id @default(cuid())
+  documentNumber String        @unique
+  invoiceId      String
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id])
+  customerId     String
+  customer       Customer      @relation(fields: [customerId], references: [id])
+  amount         Decimal      
+  method         PaymentMethod @default(CASH)
+  paymentDate    DateTime      @default(now())
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("payments")
+}
+
+// ==================== Setting ====================
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+
+  @@map("settings")
+}
+
+// ==================== User & Role ====================
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  permissions String   @default("{}")
+  isSystem    Boolean  @default(false)
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  username       String    @unique
+  passwordHash   String
+  fullName       String
+  phone          String?
+  avatarUrl      String?
+  roleId         String
+  role           Role      @relation(fields: [roleId], references: [id])
+  isActive       Boolean   @default(true)
+  isDeleted      Boolean   @default(false)
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+  lastLoginAt    DateTime?
+  createdById     String?
+  createdBy       User?     @relation("UserCreator", fields: [createdById], references: [id])
+  createdUsers    User[]    @relation("UserCreator")
+  purchaseOrders  PurchaseOrder[]  @relation("PurchaseOrderCreator")
+  purchaseReturns PurchaseReturn[] @relation("PurchaseReturnCreator")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("users")
+}
