@@ -42,7 +42,7 @@ export default function InventoryReportPage() {
       accessorKey: "currentStock",
       header: t("products.currentStock"),
       cell: ({ row }) => (
-        <span className={row.original.belowMin ? "text-destructive font-bold" : "">
+        <span className={row.original.belowMin ? "text-destructive font-bold" : ""}>
           {row.original.currentStock}
         </span>
       ),
