@@ -40,7 +40,7 @@ jobs:
           npm run db:seed:users
 
       - name: Build Windows installer
-        run: npm run db:template && next build && electron-builder --win --x64 --publish never
+        run: npm run db:template && npm run build && electron-builder --win --x64 --publish never
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
