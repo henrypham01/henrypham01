@@ -73,8 +73,8 @@ export default function RevenueReportPage() {
 
       <Tabs defaultValue="product">
         <TabsList>
-          <TabsTrigger>
-          <TabsTrigger>
+          <TabsTrigger value="product">{t("reports.revenueByProduct")}</TabsTrigger>
+          <TabsTrigger value="region">{t("reports.revenueByRegion")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="product">

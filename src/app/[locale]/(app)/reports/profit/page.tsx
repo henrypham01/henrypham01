@@ -48,7 +48,7 @@ export default function ProfitReportPage() {
       accessorKey: "grossProfit",
       header: t("reports.grossProfit"),
       cell: ({ row }) => (
-        <span className={row.original.grossProfit < 0 ? "text-green-600"}>
+        <span className={row.original.grossProfit < 0 ? "text-destructive" : "text-green-600"}>
           {formatVND(row.original.grossProfit)}
         </span>
       ),
