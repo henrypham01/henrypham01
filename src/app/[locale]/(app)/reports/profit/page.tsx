@@ -74,16 +74,16 @@ export default function ProfitReportPage() {
       {data.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="rounded-lg border p-4">
-            </p>
-            </p>
+            <p className="text-sm text-muted-foreground">{t("reports.revenue")}</p>
+            <p className="text-2xl font-bold">{formatVND(totalRevenue)}</p>
           </div>
           <div className="rounded-lg border p-4">
-            </p>
-            </p>
+            <p className="text-sm text-muted-foreground">COGS</p>
+            <p className="text-2xl font-bold">{formatVND(totalCogs)}</p>
           </div>
           <div className="rounded-lg border p-4">
-            </p>
-            <p className={`text-green-600"}`}>
+            <p className="text-sm text-muted-foreground">{t("reports.grossProfit")}</p>
+            <p className={`text-2xl font-bold ${totalProfit < 0 ? "text-destructive" : "text-green-600"}`}>
               {formatVND(totalProfit)}
             </p>
           </div>
