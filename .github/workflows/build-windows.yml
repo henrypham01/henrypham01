@@ -25,6 +25,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Setup environment
+        run: |
+          echo "DATABASE_URL=file:./prisma/dev.db" > .env
+          echo "JWT_SECRET=thu-phap-cosmetic-dev-secret-change-in-production-aBcDeFgHiJkLmNoPqRsTuVwXyZ123456" >> .env
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
       - name: Setup database
         run: |
           npm run db:push
