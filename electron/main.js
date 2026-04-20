@@ -23,6 +23,9 @@ function setupUserData() {
   const dbPath = path.join(userData, "kioviet.db");
   const uploadDir = path.join(userData, "uploads");
 
+  console.log(`[kioviet] User data path: ${userData}`);
+  console.log(`[kioviet] Database path: ${dbPath}`);
+
   if (!fs.existsSync(userData)) fs.mkdirSync(userData, { recursive: true });
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -30,12 +33,19 @@ function setupUserData() {
     const templatePath = isDev
       ? path.join(__dirname, "..", "resources", "template.db")
       : path.join(process.resourcesPath, "template.db");
+    
+    console.log(`[kioviet] Looking for template at: ${templatePath}`);
+    console.log(`[kioviet] Resources path: ${process.resourcesPath}`);
+    console.log(`[kioviet] Template exists: ${fs.existsSync(templatePath)}`);
+    
     if (fs.existsSync(templatePath)) {
       fs.copyFileSync(templatePath, dbPath);
-      console.log(`[kioviet] Copied template DB → ${dbPath}`);
+      console.log(`[kioviet] ✓ Copied template DB → ${dbPath}`);
     } else {
-      console.error(`[kioviet] Template DB not found: ${templatePath}`);
+      console.error(`[kioviet] ✗ Template DB not found: ${templatePath}`);
     }
+  } else {
+    console.log(`[kioviet] Database already exists: ${dbPath}`);
   }
 
   process.env.DATABASE_URL = `file:${dbPath}`;
@@ -43,12 +53,17 @@ function setupUserData() {
   process.env.NODE_ENV = "production";
   process.env.PORT = PORT;
   process.env.HOSTNAME = HOSTNAME;
+  process.env.JWT_SECRET = process.env.JWT_SECRET || "thu-phap-cosmetic-dev-secret-change-in-production-aBcDeFgHiJkLmNoPqRsTuVwXyZ123456";
+  console.log(`[kioviet] Set DATABASE_URL=${process.env.DATABASE_URL}`);
 }
 
 function startNextServer() {
   // In packaged app, standalone server is bundled under resources/app.
   // In dev, we expect `next dev` to be running externally (via electron:dev script).
-  if (isDev) return;
+  if (isDev) {
+    console.log("[kioviet] Development mode - skipping server start");
+    return;
+  }
 
   const serverJs = path.join(
     process.resourcesPath,
@@ -58,8 +73,12 @@ function startNextServer() {
     "server.js"
   );
 
+  console.log(`[kioviet] Starting Next.js server...`);
+  console.log(`[kioviet] Server path: ${serverJs}`);
+  console.log(`[kioviet] Server exists: ${fs.existsSync(serverJs)}`);
+
   if (!fs.existsSync(serverJs)) {
-    console.error(`[kioviet] Standalone server not found: ${serverJs}`);
+    console.error(`[kioviet] ✗ Standalone server not found: ${serverJs}`);
     return;
   }
 
@@ -70,11 +89,13 @@ function startNextServer() {
     cwd: path.dirname(serverJs),
   });
 
+  console.log(`[kioviet] ✓ Server process started (PID: ${nextServer.pid})`);
+
   nextServer.on("exit", (code, signal) => {
-    console.log(`[kioviet] Next server exited (code=${code}, signal=${signal})`);
+    console.log(`[kioviet] Server exited (code=${code}, signal=${signal})`);
   });
   nextServer.on("error", (err) => {
-    console.error(`[kioviet] Next server error: ${err.message}`);
+    console.error(`[kioviet] Server error: ${err.message}`);
   });
 }
 
@@ -365,17 +386,27 @@ async function createWindow() {
   });
 
   // Wait for the server to accept connections
-  const waitForServer = async (maxRetries = 30, interval = 1000) => {
+  const waitForServer = async (maxRetries = 60, interval = 1000) => {
+    console.log(`[kioviet] Waiting for server at http://${HOSTNAME}:${PORT}...`);
+    
     for (let i = 0; i < maxRetries; i++) {
       try {
-        const response = await fetch(`http://${HOSTNAME}:${PORT}/`);
-        if (response.ok || response.status === 404) {
-          console.log("[kioviet] Server is ready");
-          return true;
-        }
+        const response = await fetch(`http://${HOSTNAME}:${PORT}/api/auth/me`, {
+          method: "GET",
+          timeout: 5000,
+        });
+        console.log(`[kioviet] Server is ready (attempt ${i + 1})`);
+        return true;
       } catch (err) {
+        if (i % 5 === 0) {
+          console.log(`[kioviet] Waiting for server... (${i}/${maxRetries})`);
+        }
         if (i === maxRetries - 1) {
           console.error(`[kioviet] Server did not start after ${maxRetries * interval / 1000}s`);
+          // Show error dialog
+          mainWindow.loadURL(
+            `data:text/html,<html><body style="font-family:Arial;padding:20px;"><h1>Lỗi</h1><p>Server không khởi động được.</p><p style="color:red;">Hãy kiểm tra:</p><ul><li>Port 3000 có bị chiếm không</li><li>Cài đặt Database có sai không</li><li>Thử khởi động lại ứng dụng</li></ul></body></html>`
+          );
           return false;
         }
         await new Promise((r) => setTimeout(r, interval));
@@ -384,8 +415,14 @@ async function createWindow() {
     return false;
   };
 
-  await waitForServer();
-  mainWindow.loadURL(`http://${HOSTNAME}:${PORT}/vi`);
+  const serverReady = await waitForServer();
+  
+  if (serverReady) {
+    mainWindow.loadURL(`http://${HOSTNAME}:${PORT}/vi`);
+  }
+  
+  // Add 2s delay before showing to ensure UI renders
+  await new Promise(r => setTimeout(r, 2000));
 
   if (isDev) mainWindow.webContents.openDevTools();
 
@@ -406,10 +443,15 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  console.log("[kioviet] App ready - initializing...");
   setupUserData();
+  console.log("[kioviet] User data setup complete");
   startNextServer();
+  console.log("[kioviet] Server startup initiated");
   registerIpcHandlers();
+  console.log("[kioviet] IPC handlers registered");
   await createWindow();
+  console.log("[kioviet] Window created");
 });
 
 app.on("window-all-closed", () => {
