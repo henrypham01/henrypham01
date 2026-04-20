@@ -85,9 +85,21 @@ function startNextServer() {
   // Use fork so the child runs in a Node.js process (Electron provides node runtime)
   nextServer = fork(serverJs, [], {
     env: process.env,
-    stdio: "inherit",
+    stdio: ["ignore", "pipe", "pipe"],  // Capture stdout/stderr
     cwd: path.dirname(serverJs),
   });
+
+  // Capture server output
+  if (nextServer.stdout) {
+    nextServer.stdout.on("data", (data) => {
+      console.log(`[server] ${data}`);
+    });
+  }
+  if (nextServer.stderr) {
+    nextServer.stderr.on("data", (data) => {
+      console.error(`[server-err] ${data}`);
+    });
+  }
 
   console.log(`[kioviet] ✓ Server process started (PID: ${nextServer.pid})`);
 
@@ -386,27 +398,61 @@ async function createWindow() {
   });
 
   // Wait for the server to accept connections
-  const waitForServer = async (maxRetries = 60, interval = 1000) => {
+  const waitForServer = async (maxRetries = 120, interval = 1000) => {
     console.log(`[kioviet] Waiting for server at http://${HOSTNAME}:${PORT}...`);
     
     for (let i = 0; i < maxRetries; i++) {
       try {
-        const response = await fetch(`http://${HOSTNAME}:${PORT}/api/auth/me`, {
+        const response = await fetch(`http://${HOSTNAME}:${PORT}/`, {
           method: "GET",
           timeout: 5000,
         });
         console.log(`[kioviet] Server is ready (attempt ${i + 1})`);
         return true;
       } catch (err) {
-        if (i % 5 === 0) {
-          console.log(`[kioviet] Waiting for server... (${i}/${maxRetries})`);
+        if (i % 10 === 0) {
+          console.log(`[kioviet] Waiting for server... (${i}/${maxRetries}) - ${i * interval / 1000}s`);
         }
         if (i === maxRetries - 1) {
           console.error(`[kioviet] Server did not start after ${maxRetries * interval / 1000}s`);
-          // Show error dialog
-          mainWindow.loadURL(
-            `data:text/html,<html><body style="font-family:Arial;padding:20px;"><h1>Lỗi</h1><p>Server không khởi động được.</p><p style="color:red;">Hãy kiểm tra:</p><ul><li>Port 3000 có bị chiếm không</li><li>Cài đặt Database có sai không</li><li>Thử khởi động lại ứng dụng</li></ul></body></html>`
-          );
+          const errorHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+    h1 { color: #d32f2f; }
+    .error-box { background: #ffebee; border: 1px solid #d32f2f; padding: 15px; border-radius: 5px; }
+    .tips { margin-top: 20px; }
+    ul { margin: 10px 0; }
+    li { margin: 5px 0; }
+    .code { background: #f5f5f5; padding: 2px 6px; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <h1>Lỗi - Server không khởi động được</h1>
+  <div class="error-box">
+    <p>Ứng dụng không thể kết nối tới server sau ${maxRetries * interval / 1000}s.</p>
+  </div>
+  <div class="tips">
+    <h2>Hãy kiểm tra:</h2>
+    <ul>
+      <li>Port <span class="code">3000</span> có bị một ứng dụng khác sử dụng không?</li>
+      <li>Thư mục cài đặt có quyền truy cập không?</li>
+      <li>Database cấu hình có chính xác không?</li>
+    </ul>
+    <h2>Cách khắc phục:</h2>
+    <ul>
+      <li>Đóng các ứng dụng khác đang sử dụng port 3000</li>
+      <li>Gỡ cài đặt hoàn toàn rồi cài lại</li>
+      <li>Chạy lại ứng dụng</li>
+    </ul>
+  </div>
+</body>
+</html>
+          `;
+          mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(errorHtml)}`);
           return false;
         }
         await new Promise((r) => setTimeout(r, interval));
