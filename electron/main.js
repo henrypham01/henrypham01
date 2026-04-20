@@ -365,17 +365,26 @@ async function createWindow() {
   });
 
   // Wait for the server to accept connections
-  try {
-    await waitOn({
-      resources: [`http-get://${HOSTNAME}:${PORT}`],
-      timeout: 30000,
-      interval: 200,
-      validateStatus: () => true,
-    });
-  } catch (err) {
-    console.error(`[kioviet] Server did not start in time: ${err.message}`);
-  }
+  const waitForServer = async (maxRetries = 30, interval = 1000) => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch(`http://${HOSTNAME}:${PORT}/`);
+        if (response.ok || response.status === 404) {
+          console.log("[kioviet] Server is ready");
+          return true;
+        }
+      } catch (err) {
+        if (i === maxRetries - 1) {
+          console.error(`[kioviet] Server did not start after ${maxRetries * interval / 1000}s`);
+          return false;
+        }
+        await new Promise((r) => setTimeout(r, interval));
+      }
+    }
+    return false;
+  };
 
+  await waitForServer();
   mainWindow.loadURL(`http://${HOSTNAME}:${PORT}/vi`);
 
   if (isDev) mainWindow.webContents.openDevTools();
