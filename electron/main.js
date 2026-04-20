@@ -3,7 +3,6 @@ const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { fork } = require("child_process");
-const waitOn = require("wait-on");
 
 const isDev = !app.isPackaged;
 const PORT = process.env.PORT || "3000";
