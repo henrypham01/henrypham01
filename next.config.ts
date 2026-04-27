@@ -5,6 +5,8 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Allow Electron app to access dev resources (HMR, webpack-hmr)
+  allowedDevOrigins: ["127.0.0.1"],
   // Next's file tracing needs to pick up the generated Prisma client and
   // the better-sqlite3 native binding so they end up in .next/standalone.
   outputFileTracingIncludes: {
