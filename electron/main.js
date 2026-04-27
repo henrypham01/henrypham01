@@ -85,7 +85,7 @@ function startNextServer() {
   // Use fork so the child runs in a Node.js process (Electron provides node runtime)
   nextServer = fork(serverJs, [], {
     env: process.env,
-    stdio: ["ignore", "pipe", "pipe"],  // Capture stdout/stderr
+    stdio: ["ignore", "pipe", "pipe", "ipc"],  // Capture stdout/stderr + IPC channel
     cwd: path.dirname(serverJs),
   });
 
