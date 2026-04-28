@@ -39,8 +39,14 @@ jobs:
           npm run db:seed
           npm run db:seed:users
 
+      - name: Build Next.js app
+        run: npm run db:template && npm run build
+
+      - name: Install production dependencies for standalone
+        run: npm install --production --prefix .next/standalone
+
       - name: Build Windows installer
-        run: npm run db:template && npm run build && npx electron-builder --win --x64 --publish never
+        run: npx electron-builder --win --x64 --publish never
 
       - name: Upload installer
         uses: actions/upload-artifact@v4

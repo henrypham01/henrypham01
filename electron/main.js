@@ -82,19 +82,16 @@ function startNextServer() {
     return;
   }
 
-  // The .next/standalone directory contains bundled node_modules from outputFileTracingIncludes
+  // The .next/standalone directory contains Next.js production server + bundled dependencies
   const standalonePath = path.dirname(serverJs);
-  const nodeModulesPath = path.join(standalonePath, "node_modules");
   
   console.log(`[kioviet] Standalone path: ${standalonePath}`);
-  console.log(`[kioviet] Node modules path: ${nodeModulesPath}`);
-  console.log(`[kioviet] Node modules exists: ${fs.existsSync(nodeModulesPath)}`);
 
   // Use fork with .next/standalone as cwd - Node.js will find node_modules there
   nextServer = fork(serverJs, [], {
     env: process.env,
     stdio: ["ignore", "pipe", "pipe", "ipc"],  // Capture stdout/stderr + IPC channel
-    cwd: standalonePath,  // Run from .next/standalone where node_modules should be bundled
+    cwd: standalonePath,  // Run from .next/standalone where node_modules is installed
   });
 
   // Capture server output
