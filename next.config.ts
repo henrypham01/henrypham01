@@ -12,8 +12,13 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": [
       "./src/generated/prisma/**/*",
+      "./node_modules/next/**/*",
+      "./node_modules/react/**/*",
+      "./node_modules/react-dom/**/*",
+      "./node_modules/next-intl/**/*",
       "./node_modules/better-sqlite3/**/*",
-      "./node_modules/@prisma/adapter-better-sqlite3/**/*",
+      "./node_modules/@prisma/**/*",
+      "./node_modules/@tanstack/**/*",
     ],
   },
   // Disable remote image optimization — offline app has no Sharp/CDN,
