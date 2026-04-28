@@ -82,23 +82,19 @@ function startNextServer() {
     return;
   }
 
-  // Set NODE_PATH and working directory so the standalone server can find node_modules
-  const appRootPath = path.join(process.resourcesPath, "app");
-  const nodeModulesPath = path.join(appRootPath, "node_modules");
-  const nodePathEnv = process.env.NODE_PATH ? `${nodeModulesPath}${path.delimiter}${process.env.NODE_PATH}` : nodeModulesPath;
+  // The .next/standalone directory contains bundled node_modules from outputFileTracingIncludes
+  const standalonePath = path.dirname(serverJs);
+  const nodeModulesPath = path.join(standalonePath, "node_modules");
   
-  console.log(`[kioviet] App root path: ${appRootPath}`);
-  console.log(`[kioviet] Setting NODE_PATH: ${nodePathEnv}`);
+  console.log(`[kioviet] Standalone path: ${standalonePath}`);
+  console.log(`[kioviet] Node modules path: ${nodeModulesPath}`);
   console.log(`[kioviet] Node modules exists: ${fs.existsSync(nodeModulesPath)}`);
 
-  // Use fork with app root as cwd so Node can traverse up to find node_modules
+  // Use fork with .next/standalone as cwd - Node.js will find node_modules there
   nextServer = fork(serverJs, [], {
-    env: {
-      ...process.env,
-      NODE_PATH: nodePathEnv,
-    },
+    env: process.env,
     stdio: ["ignore", "pipe", "pipe", "ipc"],  // Capture stdout/stderr + IPC channel
-    cwd: appRootPath,  // Set cwd to app root, not .next/standalone
+    cwd: standalonePath,  // Run from .next/standalone where node_modules should be bundled
   });
 
   // Capture server output
