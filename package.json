@@ -45,7 +45,6 @@
     ],
     "extraResources": [
       { "from": "resources/template.db", "to": "template.db" },
-      { "from": "node_modules", "to": "app/node_modules" },
       { "from": ".next/standalone", "to": "app/.next/standalone" },
       { "from": ".next/static", "to": "app/.next/static" },
       { "from": "public", "to": "app/public" }

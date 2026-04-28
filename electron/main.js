@@ -82,22 +82,23 @@ function startNextServer() {
     return;
   }
 
-  // Set NODE_PATH so the standalone server can find node_modules
-  const nodeModulesPath = path.join(process.resourcesPath, "app", "node_modules");
+  // Set NODE_PATH and working directory so the standalone server can find node_modules
+  const appRootPath = path.join(process.resourcesPath, "app");
+  const nodeModulesPath = path.join(appRootPath, "node_modules");
   const nodePathEnv = process.env.NODE_PATH ? `${nodeModulesPath}${path.delimiter}${process.env.NODE_PATH}` : nodeModulesPath;
   
+  console.log(`[kioviet] App root path: ${appRootPath}`);
   console.log(`[kioviet] Setting NODE_PATH: ${nodePathEnv}`);
-  console.log(`[kioviet] Node modules path: ${nodeModulesPath}`);
   console.log(`[kioviet] Node modules exists: ${fs.existsSync(nodeModulesPath)}`);
 
-  // Use fork so the child runs in a Node.js process (Electron provides node runtime)
+  // Use fork with app root as cwd so Node can traverse up to find node_modules
   nextServer = fork(serverJs, [], {
     env: {
       ...process.env,
       NODE_PATH: nodePathEnv,
     },
     stdio: ["ignore", "pipe", "pipe", "ipc"],  // Capture stdout/stderr + IPC channel
-    cwd: path.dirname(serverJs),
+    cwd: appRootPath,  // Set cwd to app root, not .next/standalone
   });
 
   // Capture server output
