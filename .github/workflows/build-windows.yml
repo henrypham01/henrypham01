@@ -45,12 +45,10 @@ jobs:
       - name: Copy node_modules to standalone
         shell: powershell
         run: |
-          # Copy node_modules into .next/standalone directory
           if (Test-Path ".\.next\standalone\node_modules") {
             Remove-Item ".\.next\standalone\node_modules" -Recurse -Force
           }
           Copy-Item -Path ".\node_modules" -Destination ".\.next\standalone\node_modules" -Recurse -Force
-          Write-Host "✓ Copied node_modules to .next/standalone"
 
       - name: Build Windows installer
         run: npx electron-builder --win --x64 --publish never
